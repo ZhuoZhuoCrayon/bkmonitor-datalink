@@ -49,19 +49,21 @@ type StatImpl struct {
 	pipeline.Validator
 }
 
-// NewStatImpl 创建并返回一个 StatImpl 实例
-func NewStatImpl() *StatImpl {
-	return &StatImpl{}
+func getIpTokenFromCtxOrDefault(ctx context.Context, ip, token string) (string, string) {
+	// 尝试从 ctx 中取 token
+	tokenFromCtx := define.TokenFromTarsCtx(ctx)
+	if len(tokenFromCtx) != 0 {
+		token = tokenFromCtx
+	}
+	// 尝试从 ctx 中取 ip
+	ipFromContext := utils.GetTarsIpFromContext(ctx)
+	if len(ipFromContext) != 0 {
+		ip = ipFromContext
+	}
+	return ip, token
 }
 
-// ReportMicMsg 接收统计指标，推送到处理队列
-func (imp *StatImpl) ReportMicMsg(tarsCtx context.Context, stats map[statf.StatMicMsgHead]statf.StatMicMsgBody, bFromClient bool) (int32, error) {
-	defer utils.HandleCrash()
-	if len(stats) == 0 {
-		return 0, nil
-	}
-
-	start := time.Now()
+func getIpTokenFromStats(stats map[statf.StatMicMsgHead]statf.StatMicMsgBody) (string, string) {
 	ip, token := "", ""
 	// 尝试从 MsgHead 中读取 ip、token
 	for head := range stats {
@@ -78,16 +80,35 @@ func (imp *StatImpl) ReportMicMsg(tarsCtx context.Context, stats map[statf.StatM
 			break
 		}
 	}
-	if len(token) == 0 {
-		// 尝试从 ctx 中取 token
-		token = define.TokenFromTarsCtx(tarsCtx)
+	return ip, token
+}
+
+func getIpTokenFromProps(props map[propertyf.StatPropMsgHead]propertyf.StatPropMsgBody) (string, string) {
+	ip, token := "", ""
+	// 尝试从 MsgHead 中读取 ip、token
+	for head := range props {
+		_, token = define.TokenFromString(head.ModuleName)
+		ip = head.Ip
+		break
+	}
+	return ip, token
+}
+
+// NewStatImpl 创建并返回一个 StatImpl 实例
+func NewStatImpl() *StatImpl {
+	return &StatImpl{}
+}
+
+// ReportMicMsg 接收统计指标，推送到处理队列
+func (imp *StatImpl) ReportMicMsg(tarsCtx context.Context, stats map[statf.StatMicMsgHead]statf.StatMicMsgBody, bFromClient bool) (int32, error) {
+	defer utils.HandleCrash()
+	if len(stats) == 0 {
+		return 0, nil
 	}
 
-	ipFromContext := utils.GetTarsIpFromContext(tarsCtx)
-	if len(ipFromContext) != 0 {
-		ip = ipFromContext
-	}
-
+	start := time.Now()
+	ip, token := getIpTokenFromStats(stats)
+	ip, token = getIpTokenFromCtxOrDefault(tarsCtx, ip, token)
 	r := &define.Record{
 		RequestType:   define.RequestTars,
 		RequestClient: define.RequestClient{IP: ip},
@@ -138,23 +159,8 @@ func (imp *PropertyImpl) ReportPropMsg(tarsCtx context.Context, props map[proper
 	}
 
 	start := time.Now()
-	ip, token := "", ""
-	// 尝试从 MsgHead 中读取 ip、token
-	for head := range props {
-		_, token = define.TokenFromString(head.ModuleName)
-		ip = head.Ip
-		break
-	}
-	if len(token) == 0 {
-		// 尝试从 ctx 中取 token
-		token = define.TokenFromTarsCtx(tarsCtx)
-	}
-
-	ipFromContext := utils.GetTarsIpFromContext(tarsCtx)
-	if len(ipFromContext) != 0 {
-		ip = ipFromContext
-	}
-
+	ip, token := getIpTokenFromProps(props)
+	ip, token = getIpTokenFromCtxOrDefault(tarsCtx, ip, token)
 	r := &define.Record{
 		RequestType:   define.RequestTars,
 		RequestClient: define.RequestClient{IP: ip},

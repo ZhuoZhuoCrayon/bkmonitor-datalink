@@ -17,6 +17,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/TencentBlueKing/bkmonitor-datalink/pkg/collector/define"
+	"github.com/TencentBlueKing/bkmonitor-datalink/pkg/collector/internal/utils"
 	"github.com/TencentBlueKing/bkmonitor-datalink/pkg/libgse/common"
 )
 
@@ -47,34 +48,89 @@ func TestTarsProperty(t *testing.T) {
 		},
 	}
 	record := &define.Record{
-		RecordType:  define.RecordTars,
-		RequestType: define.RequestTars,
-		Token:       define.Token{Original: "xxx", MetricsDataId: 123},
-		Data:        data,
+		RecordType:    define.RecordTars,
+		RequestType:   define.RequestTars,
+		RequestClient: define.RequestClient{IP: "127.0.0.1"},
+		Token:         define.Token{Original: "xxx", MetricsDataId: 123},
+		Data:          data,
 	}
 	TarsConverter.Convert(record, func(events ...define.Event) {
-		assert.Len(t, events, 6)
-		expect := common.MapStr{
-			"dimension": map[string]string{
-				"i_property_ver": "2",
-				"ip":             "127.0.0.1",
-				"module_name":    "TestApp.HelloGo",
-				"property_name":  "Add",
-				"s_container":    "",
-				"set_area":       "",
-				"set_name":       "",
-			},
-			"metrics": common.MapStr{
-				"Add_Avg":   73.333,
-				"Add_Count": float64(6),
-				"Add_Max":   float64(94),
-				"Add_Min":   float64(33),
-				"Add_Sum":   float64(440),
-			},
-			"target":    "127.0.0.1",
-			"timestamp": int64(1719417736),
+		assert.Len(t, events, 10)
+		commonDims := map[string]string{
+			"i_property_ver": "2",
+			"ip":             "127.0.0.1",
+			"module_name":    "TestApp.HelloGo",
+			"property_name":  "Add",
+			"s_container":    "",
+			"set_area":       "",
+			"set_name":       "",
 		}
-		assert.Equal(t, expect, events[5].Data())
+		expects := []common.MapStr{
+			{
+				"dimension": utils.MergeMaps(commonDims, map[string]string{"property_policy": "Sum"}),
+				"metrics":   common.MapStr{"tars_property_sum": float64(440)},
+				"target":    "127.0.0.1",
+				"timestamp": int64(1719417736),
+			},
+			{
+				"dimension": utils.MergeMaps(commonDims, map[string]string{"property_policy": "Avg"}),
+				"metrics":   common.MapStr{"tars_property_avg": 73.333},
+				"target":    "127.0.0.1",
+				"timestamp": int64(1719417736),
+			},
+			{
+				"dimension": utils.MergeMaps(commonDims, map[string]string{"property_policy": "Max"}),
+				"metrics":   common.MapStr{"tars_property_max": float64(94)},
+				"target":    "127.0.0.1",
+				"timestamp": int64(1719417736),
+			},
+			{
+				"dimension": utils.MergeMaps(commonDims, map[string]string{"property_policy": "Min"}),
+				"metrics":   common.MapStr{"tars_property_min": float64(33)},
+				"target":    "127.0.0.1",
+				"timestamp": int64(1719417736),
+			},
+			{
+				"dimension": utils.MergeMaps(commonDims, map[string]string{"property_policy": "Count"}),
+				"metrics":   common.MapStr{"tars_property_count": float64(6)},
+				"target":    "127.0.0.1",
+				"timestamp": int64(1719417736),
+			},
+			{
+				"dimension": utils.MergeMaps(commonDims, map[string]string{"property_policy": "Distr", "le": "0"}),
+				"metrics":   common.MapStr{"tars_property_distr_bucket": 0},
+				"target":    "127.0.0.1",
+				"timestamp": int64(1719417736),
+			},
+			{
+				"dimension": utils.MergeMaps(commonDims, map[string]string{"property_policy": "Distr", "le": "50"}),
+				"metrics":   common.MapStr{"tars_property_distr_bucket": 1},
+				"target":    "127.0.0.1",
+				"timestamp": int64(1719417736),
+			},
+			{
+				"dimension": utils.MergeMaps(commonDims, map[string]string{"property_policy": "Distr", "le": "100"}),
+				"metrics":   common.MapStr{"tars_property_distr_bucket": 6},
+				"target":    "127.0.0.1",
+				"timestamp": int64(1719417736),
+			},
+			{
+				"dimension": utils.MergeMaps(commonDims, map[string]string{"property_policy": "Distr", "le": "+Inf"}),
+				"metrics":   common.MapStr{"tars_property_distr_bucket": 6},
+				"target":    "127.0.0.1",
+				"timestamp": int64(1719417736),
+			},
+			{
+				"dimension": utils.MergeMaps(commonDims, map[string]string{"property_policy": "Distr"}),
+				"metrics":   common.MapStr{"tars_property_distr_count": 6},
+				"target":    "127.0.0.1",
+				"timestamp": int64(1719417736),
+			},
+		}
+
+		for idx, event := range events {
+			assert.Equal(t, expects[idx], event.Data())
+		}
 	})
 }
 
@@ -120,10 +176,11 @@ func TestTarsStat(t *testing.T) {
 		},
 	}
 	record := &define.Record{
-		RecordType:  define.RecordTars,
-		RequestType: define.RequestTars,
-		Token:       define.Token{Original: "xxx", MetricsDataId: 123},
-		Data:        data,
+		RecordType:    define.RecordTars,
+		RequestType:   define.RequestTars,
+		RequestClient: define.RequestClient{IP: "127.0.0.1"},
+		Token:         define.Token{Original: "xxx", MetricsDataId: 123},
+		Data:          data,
 	}
 	TarsConverter.Convert(record, func(events ...define.Event) {
 		assert.Len(t, events, 12)

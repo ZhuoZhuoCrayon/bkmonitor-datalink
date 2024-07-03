@@ -23,11 +23,11 @@ import (
 )
 
 const (
-	NodeIp      string = "127.0.0.1"
-	ServerPort  int    = 4319
-	StatServant string = "collector.tarsstat.StatObj"
-	PropServant string = "collector.tarsproperty.PropertyObj"
-	MockToken   string = "Ymtia2JrYmtia2JrYmtiaxUtdLzrldhHtlcjc1Cwfo1u99rVk5HGe8EjT761brGtKm3H4Ran78rWl85HwzfRgw=="
+	NodeIp      = "127.0.0.1"
+	ServerPort  = 4319
+	StatServant = "collector.tarsstat.StatObj"
+	PropServant = "collector.tarsproperty.PropertyObj"
+	MockToken   = "Ymtia2JrYmtia2JrYmtiaxUtdLzrldhHtlcjc1Cwfo1u99rVk5HGe8EjT761brGtKm3H4Ran78rWl85HwzfRgw=="
 )
 
 func newPropApp() *propertyf.PropertyF {

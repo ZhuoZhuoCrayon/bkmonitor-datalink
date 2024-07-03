@@ -70,10 +70,10 @@ func (s *TarsProtocol) Invoke(ctx context.Context, req []byte) []byte {
 		logger.Errorf("SetPacketType in context fail, packetType=%v", rspPackage.CPacketType)
 	}
 	if ok := current.SetRequestContext(ctx, reqPackage.Context); !ok {
-		logger.Warnf("SetRequestContext fail, ctx=%v", reqPackage.Context)
+		logger.Errorf("SetRequestContext fail, ctx=%v", reqPackage.Context)
 	}
 	if ok := current.SetRequestStatus(ctx, reqPackage.Status); !ok {
-		logger.Warnf("SetRequestStatus fail, ctx=%v", reqPackage.Status)
+		logger.Errorf("SetRequestStatus fail, status=%v", reqPackage.Status)
 	}
 	servant, ok := s.servants[reqPackage.SServantName]
 	if !ok {
@@ -90,11 +90,11 @@ func (s *TarsProtocol) Invoke(ctx context.Context, req []byte) []byte {
 
 // InvokeTimeout indicates how to deal with timeout.
 func (s *TarsProtocol) InvokeTimeout(pkg []byte) []byte {
-	rspPackage := requestf.ResponsePacket{}
-	//  invoke timeout need to return IRequestId
-	reqPackage := requestf.RequestPacket{}
+	var reqPackage requestf.RequestPacket
+	var rspPackage requestf.ResponsePacket
 	is := codec.NewReader(pkg[4:])
 	reqPackage.ReadFrom(is)
+	// invoke timeout need to return IRequestId
 	rspPackage.IRequestId = reqPackage.IRequestId
 	rspPackage.IRet = 1
 	rspPackage.SResultDesc = "server invoke timeout"
@@ -109,7 +109,7 @@ func (s *TarsProtocol) ParsePackage(buff []byte) (int, int) {
 
 // GetCloseMsg return a package to close connection
 func (s *TarsProtocol) GetCloseMsg() []byte {
-	rspPackage := requestf.ResponsePacket{}
+	var rspPackage requestf.ResponsePacket
 	rspPackage.IVersion = basef.TARSVERSION
 	rspPackage.IRequestId = 0
 	rspPackage.SResultDesc = "_reconnect_"
