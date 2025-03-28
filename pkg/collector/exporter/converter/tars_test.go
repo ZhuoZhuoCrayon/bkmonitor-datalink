@@ -269,7 +269,7 @@ func TestTarsStat(t *testing.T) {
 					SlaveName:     "OtherTestApp.HiGo",
 					InterfaceName: "Add",
 					MasterIp:      "",
-					SlaveIp:       "127.0.0.1",
+					SlaveIp:       "0.0.0.0",
 					SlavePort:     0,
 					ReturnValue:   0,
 					SlaveSetName:  "name",
@@ -302,20 +302,6 @@ func TestTarsStat(t *testing.T) {
 	}
 
 	TarsConverter.Convert(record, func(events ...define.Event) {
-		commonDims := map[string]string{
-			tarsStatTagsRole:          tarsStatTagsRoleClient,
-			tarsStatTagsInterfaceName: "Add",
-			tarsStatTagsMasterIp:      "127.0.0.1",
-			tarsStatTagsMasterName:    "TestApp.HelloGo@1.1",
-			tarsStatTagsReturnValue:   "0",
-			tarsStatTagsSlaveIp:       "127.0.0.1",
-			tarsStatTagsSlaveName:     "OtherTestApp.HiGo",
-			tarsStatTagsSlavePort:     "0",
-			tarsStatTagsSlaveSetArea:  "area",
-			tarsStatTagsSlaveSetId:    "1",
-			tarsStatTagsSlaveSetName:  "name",
-			tarsStatTagsTarsVersion:   "1.4.5",
-		}
 		rpcMetricDims := map[string]string{
 			resourceTagsScopeName:       "client_metrics",
 			resourceTagsRPCSystem:       "tars",
@@ -325,7 +311,23 @@ func TestTarsStat(t *testing.T) {
 			rpcMetricTagsCallerServer:   "TestApp.HelloGo",
 			rpcMetricTagsCallerIp:       "127.0.0.1",
 			rpcMetricTagsCalleeServer:   "OtherTestApp.HiGo",
-			rpcMetricTagsCalleeIp:       "127.0.0.1",
+			rpcMetricTagsCalleeIp:       "0.0.0.0",
+			rpcMetricTagsUserExt1:       "0",
+			rpcMetricTagsCalleeMethod:   "Add",
+			rpcMetricTagsCalleeConSetid: "name.area.1",
+			rpcMetricTagsCode:           "0",
+		}
+
+		rpcServerMetricDims := map[string]string{
+			resourceTagsScopeName:       "server_metrics",
+			resourceTagsRPCSystem:       "tars",
+			resourceTagsServiceName:     "OtherTestApp.HiGo",
+			resourceTagsInstance:        "0.0.0.0",
+			resourceTagsVersion:         "1.1",
+			rpcMetricTagsCallerServer:   "TestApp.HelloGo",
+			rpcMetricTagsCallerIp:       "127.0.0.1",
+			rpcMetricTagsCalleeServer:   "OtherTestApp.HiGo",
+			rpcMetricTagsCalleeIp:       "0.0.0.0",
 			rpcMetricTagsUserExt1:       "0",
 			rpcMetricTagsCalleeMethod:   "Add",
 			rpcMetricTagsCalleeConSetid: "name.area.1",
@@ -333,55 +335,6 @@ func TestTarsStat(t *testing.T) {
 		}
 
 		expects := []common.MapStr{
-			{
-				"dimension": utils.MergeMaps(commonDims, map[string]string{"le": "0.1"}),
-				"metrics":   common.MapStr{"tars_request_duration_seconds_bucket": 0},
-				"target":    "127.0.0.1",
-				"timestamp": int64(1719417736),
-			},
-			{
-				"dimension": utils.MergeMaps(commonDims, map[string]string{"le": "0.2"}),
-				"metrics":   common.MapStr{"tars_request_duration_seconds_bucket": 2},
-				"target":    "127.0.0.1",
-				"timestamp": int64(1719417736),
-			},
-			{
-				"dimension": utils.MergeMaps(commonDims, map[string]string{"le": "0.5"}),
-				"metrics":   common.MapStr{"tars_request_duration_seconds_bucket": 6},
-				"target":    "127.0.0.1",
-				"timestamp": int64(1719417736),
-			},
-			{
-				"dimension": utils.MergeMaps(commonDims, map[string]string{"le": "1"}),
-				"metrics":   common.MapStr{"tars_request_duration_seconds_bucket": 6},
-				"target":    "127.0.0.1",
-				"timestamp": int64(1719417736),
-			},
-			{
-				"dimension": utils.MergeMaps(commonDims, map[string]string{"le": "+Inf"}),
-				"metrics":   common.MapStr{"tars_request_duration_seconds_bucket": 6},
-				"target":    "127.0.0.1",
-				"timestamp": int64(1719417736),
-			},
-			{
-				"dimension": utils.MergeMaps(commonDims, nil),
-				"metrics":   common.MapStr{"tars_request_duration_seconds_count": 6},
-				"target":    "127.0.0.1",
-				"timestamp": int64(1719417736),
-			},
-			{
-				"dimension": utils.MergeMaps(commonDims, nil),
-				"metrics": common.MapStr{
-					"tars_timeout_total":                int32(0),
-					"tars_requests_total":               int32(6),
-					"tars_exceptions_total":             int32(0),
-					"tars_request_duration_seconds_max": 0.284,
-					"tars_request_duration_seconds_min": 0.159,
-					"tars_request_duration_seconds_sum": 1.343,
-				},
-				"target":    "127.0.0.1",
-				"timestamp": int64(1719417736),
-			},
 			{
 				"dimension": utils.MergeMaps(rpcMetricDims, map[string]string{rpcMetricTagsCodeType: rpcMetricTagsCodeTypeSuccess}),
 				"metrics":   common.MapStr{"rpc_client_handled_total": int32(6)},
@@ -442,10 +395,164 @@ func TestTarsStat(t *testing.T) {
 				"target":    "127.0.0.1",
 				"timestamp": int64(1719417736),
 			},
+
+			{
+				"dimension": utils.MergeMaps(rpcServerMetricDims, map[string]string{rpcMetricTagsCodeType: rpcMetricTagsCodeTypeSuccess}),
+				"metrics":   common.MapStr{"rpc_server_handled_total": int32(6)},
+				"target":    "127.0.0.1",
+				"timestamp": int64(1719417736),
+			},
+			{
+				"dimension": utils.MergeMaps(rpcServerMetricDims, map[string]string{rpcMetricTagsCodeType: rpcMetricTagsCodeTypeException}),
+				"metrics":   common.MapStr{"rpc_server_handled_total": int32(0)},
+				"target":    "127.0.0.1",
+				"timestamp": int64(1719417736),
+			},
+			{
+				"dimension": utils.MergeMaps(rpcServerMetricDims, map[string]string{rpcMetricTagsCodeType: rpcMetricTagsCodeTypeTimeout}),
+				"metrics":   common.MapStr{"rpc_server_handled_total": int32(0)},
+				"target":    "127.0.0.1",
+				"timestamp": int64(1719417736),
+			},
+			{
+				"dimension": utils.MergeMaps(rpcServerMetricDims, map[string]string{"le": "0.1", rpcMetricTagsCodeType: rpcMetricTagsCodeTypeSuccess}),
+				"metrics":   common.MapStr{"rpc_server_handled_seconds_bucket": 0},
+				"target":    "127.0.0.1",
+				"timestamp": int64(1719417736),
+			},
+			{
+				"dimension": utils.MergeMaps(rpcServerMetricDims, map[string]string{"le": "0.2", rpcMetricTagsCodeType: rpcMetricTagsCodeTypeSuccess}),
+				"metrics":   common.MapStr{"rpc_server_handled_seconds_bucket": 2},
+				"target":    "127.0.0.1",
+				"timestamp": int64(1719417736),
+			},
+			{
+				"dimension": utils.MergeMaps(rpcServerMetricDims, map[string]string{"le": "0.5", rpcMetricTagsCodeType: rpcMetricTagsCodeTypeSuccess}),
+				"metrics":   common.MapStr{"rpc_server_handled_seconds_bucket": 6},
+				"target":    "127.0.0.1",
+				"timestamp": int64(1719417736),
+			},
+			{
+				"dimension": utils.MergeMaps(rpcServerMetricDims, map[string]string{"le": "1", rpcMetricTagsCodeType: rpcMetricTagsCodeTypeSuccess}),
+				"metrics":   common.MapStr{"rpc_server_handled_seconds_bucket": 6},
+				"target":    "127.0.0.1",
+				"timestamp": int64(1719417736),
+			},
+			{
+				"dimension": utils.MergeMaps(rpcServerMetricDims, map[string]string{"le": "+Inf", rpcMetricTagsCodeType: rpcMetricTagsCodeTypeSuccess}),
+				"metrics":   common.MapStr{"rpc_server_handled_seconds_bucket": 6},
+				"target":    "127.0.0.1",
+				"timestamp": int64(1719417736),
+			},
+			{
+				"dimension": utils.MergeMaps(rpcServerMetricDims, map[string]string{rpcMetricTagsCodeType: rpcMetricTagsCodeTypeSuccess}),
+				"metrics":   common.MapStr{"rpc_server_handled_seconds_count": 6},
+				"target":    "127.0.0.1",
+				"timestamp": int64(1719417736),
+			},
+			{
+				"dimension": utils.MergeMaps(rpcServerMetricDims, map[string]string{rpcMetricTagsCodeType: rpcMetricTagsCodeTypeSuccess}),
+				"metrics":   common.MapStr{"rpc_server_handled_seconds_sum": 1.343},
+				"target":    "127.0.0.1",
+				"timestamp": int64(1719417736),
+			},
 		}
 
 		for idx, event := range events {
 			assert.Equal(t, expects[idx], event.Data())
 		}
 	})
+}
+
+func BenchmarkTarsStat(b *testing.B) {
+	data := &define.TarsData{
+		Type:      define.TarsStatType,
+		Timestamp: 1719417736,
+		Data: &define.TarsStatData{
+			FromClient: true,
+			Stats: map[statf.StatMicMsgHead]statf.StatMicMsgBody{
+				{
+					MasterName:    "TestApp.HelloGo@1.1",
+					SlaveName:     "OtherTestApp.HiGo",
+					InterfaceName: "Add",
+					MasterIp:      "",
+					SlaveIp:       "127.0.0.1",
+					SlavePort:     0,
+					ReturnValue:   0,
+					SlaveSetName:  "name",
+					SlaveSetArea:  "area",
+					SlaveSetID:    "1",
+					TarsVersion:   "1.4.5",
+				}: {
+					Count:        6,
+					TimeoutCount: 0,
+					ExecCount:    0,
+					IntervalCount: map[int32]int32{
+						100:  0,
+						200:  2,
+						500:  4,
+						1000: 0,
+						2000: 0,
+						3000: 10,
+						4000: 0,
+					},
+					TotalRspTime: 1343,
+					MaxRspTime:   284,
+					MinRspTime:   159,
+				},
+			},
+		},
+	}
+	record := &define.Record{
+		RecordType:    define.RecordTars,
+		RequestType:   define.RequestTars,
+		RequestClient: define.RequestClient{IP: "127.0.0.1"},
+		Token:         define.Token{Original: "xxx", MetricsDataId: 123},
+		Data:          data,
+	}
+
+	// 优化前：BenchmarkTarsStat-10    	   22473	     45333 ns/op
+	for i := 0; i < b.N; i++ {
+		TarsConverter.Convert(record, func(events ...define.Event) {})
+	}
+}
+
+func BenchmarkTarsProperty(b *testing.B) {
+	data := &define.TarsData{
+		Type:      define.TarsPropertyType,
+		Timestamp: 1719417736,
+		Data: &define.TarsPropertyData{
+			Props: map[propertyf.StatPropMsgHead]propertyf.StatPropMsgBody{
+				{
+					ModuleName:   "TestApp.HelloGo",
+					Ip:           "127.0.0.1",
+					PropertyName: "TestApp.HelloGo.TestPropertyName",
+					SetName:      "name",
+					SetArea:      "area",
+					SetID:        "1",
+					SContainer:   "container1",
+					IPropertyVer: 2,
+				}: {VInfo: []propertyf.StatPropInfo{
+					{Value: "440", Policy: "Sum"},
+					{Value: "73.333", Policy: "Avg"},
+					{Value: "94", Policy: "Max"},
+					{Value: "33", Policy: "Min"},
+					{Value: "6", Policy: "Count"},
+					{Value: "0|0,50|1,100|5", Policy: "Distr"},
+				}},
+			},
+		},
+	}
+	record := &define.Record{
+		RecordType:    define.RecordTars,
+		RequestType:   define.RequestTars,
+		RequestClient: define.RequestClient{IP: "127.0.0.1"},
+		Token:         define.Token{Original: "xxx", MetricsDataId: 123},
+		Data:          data,
+	}
+
+	// 优化前：BenchmarkTarsProperty-10    	   39517	     28596 ns/op
+	for i := 0; i < b.N; i++ {
+		TarsConverter.Convert(record, func(events ...define.Event) {})
+	}
 }

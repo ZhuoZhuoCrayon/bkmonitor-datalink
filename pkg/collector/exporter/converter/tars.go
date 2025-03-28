@@ -348,23 +348,24 @@ func (c tarsConverter) handleStat(token define.Token, dataID int32, ip string, d
 		dims[tarsStatTagsRole] = role
 
 		// 生成 Tars 指标
-		pms := toHistogram("tars_request_duration_seconds", ip, data.Timestamp, toSecondBuckets(body.IntervalCount), dims)
-		pms = append(pms, &promMapper{
-			Metrics: common.MapStr{
-				"tars_requests_total":               body.Count,
-				"tars_exceptions_total":             body.ExecCount,
-				"tars_timeout_total":                body.TimeoutCount,
-				"tars_request_duration_seconds_max": float64(body.MaxRspTime) / 1000,
-				"tars_request_duration_seconds_min": float64(body.MinRspTime) / 1000,
-				"tars_request_duration_seconds_sum": float64(body.TotalRspTime) / 1000,
-			},
-			Target:     ip,
-			Timestamp:  data.Timestamp,
-			Dimensions: utils.CloneMap(dims),
-		})
+		//pms := toHistogram("tars_request_duration_seconds", ip, data.Timestamp, toSecondBuckets(body.IntervalCount), dims)
+		//pms = append(pms, &promMapper{
+		//	Metrics: common.MapStr{
+		//		"tars_requests_total":               body.Count,
+		//		"tars_exceptions_total":             body.ExecCount,
+		//		"tars_timeout_total":                body.TimeoutCount,
+		//		"tars_request_duration_seconds_max": float64(body.MaxRspTime) / 1000,
+		//		"tars_request_duration_seconds_min": float64(body.MinRspTime) / 1000,
+		//		"tars_request_duration_seconds_sum": float64(body.TotalRspTime) / 1000,
+		//	},
+		//	Target:     ip,
+		//	Timestamp:  data.Timestamp,
+		//	Dimensions: utils.CloneMap(dims),
+		//})
 
 		// 生成 RPC 指标
 		// Map 无序，借助列表有序生成指标，保证代码可测试性
+		var pms []*promMapper
 		codeTypes := []string{rpcMetricTagsCodeTypeSuccess, rpcMetricTagsCodeTypeException, rpcMetricTagsCodeTypeTimeout}
 		codeTypeReqCntMap := map[string]int32{
 			rpcMetricTagsCodeTypeSuccess:   body.Count,
@@ -406,6 +407,37 @@ func (c tarsConverter) handleStat(token define.Token, dataID int32, ip string, d
 			Timestamp:  data.Timestamp,
 			Dimensions: statToRPCMetricDims(dims, map[string]string{rpcMetricTagsCodeType: codeType}),
 		})
+
+		if sd.FromClient {
+			for _, pm := range pms {
+				calleeServer, ok := pm.Dimensions[rpcMetricTagsCalleeServer]
+				if !ok || calleeServer == "" || calleeServer == "." {
+					continue
+				}
+
+				calleeIp, ok := pm.Dimensions[rpcMetricTagsCalleeIp]
+				if !ok || calleeIp == "" {
+					continue
+				}
+
+				serverMetrics := common.MapStr{}
+				for k, v := range pm.Metrics {
+					serverMetrics[strings.Replace(k, role, tarsStatTagsRoleServer, -1)] = v
+				}
+
+				// callee_server -> service_name, callee_ip -> instance
+				pms = append(pms, &promMapper{
+					Metrics:   serverMetrics,
+					Target:    pm.Target,
+					Timestamp: data.Timestamp,
+					Dimensions: utils.MergeMaps(pm.Dimensions, map[string]string{
+						resourceTagsServiceName: calleeServer,
+						resourceTagsInstance:    calleeIp,
+						resourceTagsScopeName:   "server_metrics",
+					}),
+				})
+			}
+		}
 
 		for _, pm := range pms {
 			events = append(events, c.ToEvent(token, dataID, pm.AsMapStr()))
