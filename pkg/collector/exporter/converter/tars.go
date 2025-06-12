@@ -36,8 +36,10 @@ const (
 
 const (
 	rpcMetricTagsCallerServer   = "caller_server"
+	rpcMetricTagsCallerService  = "caller_service"
 	rpcMetricTagsCallerIp       = "caller_ip"
 	rpcMetricTagsCalleeServer   = "callee_server"
+	rpcMetricTagsCalleeService  = "callee_service"
 	rpcMetricTagsCalleeMethod   = "callee_method"
 	rpcMetricTagsCalleeIp       = "callee_ip"
 	rpcMetricTagsCalleeConSetid = "callee_con_setid"
@@ -204,6 +206,7 @@ func statToRPCMetricDims(src, attrs map[string]string) map[string]string {
 		case tarsStatTagsMasterName:
 			callerServer, version := splitAtLastOnce(value, "@")
 			dst[rpcMetricTagsCallerServer] = callerServer
+			dst[rpcMetricTagsCallerService] = callerServer
 			dst[resourceTagsVersion] = version
 			// 主调场景，MasterName 是上报服务
 			if role == tarsStatTagsRoleClient {
@@ -217,6 +220,7 @@ func statToRPCMetricDims(src, attrs map[string]string) map[string]string {
 			}
 		case tarsStatTagsSlaveName:
 			dst[rpcMetricTagsCalleeServer] = value
+			dst[rpcMetricTagsCalleeService] = value
 			// 被调场景，SlaveName 是上报服务
 			if role == tarsStatTagsRoleServer {
 				dst[resourceTagsServiceName] = value
