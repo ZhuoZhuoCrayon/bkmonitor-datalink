@@ -350,7 +350,7 @@ func (p *resourceFilter) fromRecordAction(record *define.Record, config Config) 
 	handle := func(rs pcommon.Resource, action FromRecordAction) {
 		switch action.Source {
 		case "request.client.ip":
-			rs.Attributes().InsertString(action.Destination, record.RequestClient.IP)
+			upsertStringIfMissingOrEmpty(rs.Attributes(), action.Destination, record.RequestClient.IP)
 		}
 	}
 
@@ -379,6 +379,16 @@ func (p *resourceFilter) fromRecordAction(record *define.Record, config Config) 
 			}
 		})
 	}
+}
+
+func upsertStringIfMissingOrEmpty(attrs pcommon.Map, key, value string) {
+	if value == "" {
+		return
+	}
+	if current, ok := attrs.Get(key); ok && current.AsString() != "" {
+		return
+	}
+	attrs.UpsertString(key, value)
 }
 
 // fromMetadataAction 补充 metadata 字段
