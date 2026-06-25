@@ -586,6 +586,13 @@ func TestFromCacheAction(t *testing.T) {
 					"namespace": "my-ns3",
 					"cluster":   "K8S-BCS-90000",
 				},
+				{
+					"action":    "CreateOrUpdate",
+					"ip":        "",
+					"name":      "empty-ip-pod",
+					"namespace": "empty-ip-ns",
+					"cluster":   "EMPTY-IP-CLUSTER",
+				},
 			},
 		})
 		w.Write(b)
@@ -630,6 +637,31 @@ processor:
 		)
 	})
 
+	t.Run("traces fill empty cache dimensions", func(t *testing.T) {
+		factory := processor.MustCreateFactory(content, NewFactory)
+		time.Sleep(time.Second) // wait for syncing
+		data := makeTracesRecord(1, "bool")
+		attrs := testkits.FirstSpanAttrs(data)
+		attrs.InsertString("net.host.ip", "127.1.0.1")
+		attrs.InsertString("k8s.bcs.cluster.id", "")
+		attrs.InsertString("k8s.namespace.name", "")
+		attrs.InsertString("k8s.pod.name", "existing-pod")
+
+		record := define.Record{
+			RecordType: define.RecordTraces,
+			Data:       data,
+		}
+
+		testkits.MustProcess(t, factory, record)
+		attrs = testkits.FirstSpanAttrs(record.Data)
+		testkits.AssertAttrsStringKeyVal(t, attrs,
+			"k8s.pod.ip", "127.1.0.1",
+			"k8s.pod.name", "existing-pod",
+			"k8s.namespace.name", "my-ns1",
+			"k8s.bcs.cluster.id", "K8S-BCS-00000",
+		)
+	})
+
 	t.Run("traces client.ip", func(t *testing.T) {
 		factory := processor.MustCreateFactory(content, NewFactory)
 		time.Sleep(time.Second) // wait for syncing
@@ -643,6 +675,29 @@ processor:
 
 		testkits.MustProcess(t, factory, record)
 		attrs := testkits.FirstSpanAttrs(record.Data)
+		testkits.AssertAttrsStringKeyVal(t, attrs,
+			"k8s.pod.ip", "127.1.0.2",
+			"k8s.pod.name", "myapp2",
+			"k8s.namespace.name", "my-ns2",
+			"k8s.bcs.cluster.id", "K8S-BCS-90000",
+		)
+	})
+
+	t.Run("traces skip empty cache key", func(t *testing.T) {
+		factory := processor.MustCreateFactory(content, NewFactory)
+		time.Sleep(time.Second) // wait for syncing
+		data := makeTracesRecord(1, "bool")
+		attrs := testkits.FirstSpanAttrs(data)
+		attrs.InsertString("net.host.ip", "")
+		attrs.InsertString("client.ip", "127.1.0.2")
+
+		record := define.Record{
+			RecordType: define.RecordTraces,
+			Data:       data,
+		}
+
+		testkits.MustProcess(t, factory, record)
+		attrs = testkits.FirstSpanAttrs(record.Data)
 		testkits.AssertAttrsStringKeyVal(t, attrs,
 			"k8s.pod.ip", "127.1.0.2",
 			"k8s.pod.name", "myapp2",

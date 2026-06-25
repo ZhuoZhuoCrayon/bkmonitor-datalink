@@ -312,13 +312,17 @@ func (p *resourceFilter) fromCacheAction(record *define.Record, config Config) {
 			if !ok {
 				continue
 			}
-			dims, ok := cache.Get(v.AsString())
+			cacheKey := v.AsString()
+			if cacheKey == "" {
+				continue
+			}
+			dims, ok := cache.Get(cacheKey)
 			if !ok {
 				continue
 			}
 
 			for dk, dv := range dims {
-				rs.Attributes().InsertString(dk, dv)
+				upsertStringIfMissingOrEmpty(rs.Attributes(), dk, dv)
 			}
 			return // 找到一次即可
 		}
